@@ -30,14 +30,14 @@ def join_titles_to_list(papers):
     return long_string
 
 
-def exploratory_analysis(papers):
-    print('got here1')
-    long_string = join_titles_to_list(papers)
-    wordcloud = WordCloud(background_color="white", max_words=4, contour_width=3, contour_color='steelblue')
+# def exploratory_analysis(papers):
+    # print('got here1')
+    # long_string = join_titles_to_list(papers)
+    # wordcloud = WordCloud(background_color="white", max_words=4, contour_width=3, contour_color='steelblue')
 
     # Generate a word cloud
-    wordcloud.generate(long_string)
-    print('Got here2')
+    # wordcloud.generate(long_string)
+    # print('Got here2')
     # Visualize the word cloud
     # topics = wordcloud.words_()
     # print(wordcloud)
@@ -79,7 +79,6 @@ def prepare_data_to_lda(papers):
     texts = data_words
     # Term Document Frequency
     corpus = [id2word.doc2bow(text) for text in texts]
-    # View
     # print(corpus[:1][0][:30])
     lda_model_training(corpus, id2word)
 
@@ -89,9 +88,7 @@ def lda_model_training(corpus, id2word):
     num_topics = 4
     # Build LDA model
     lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=id2word, num_topics=num_topics)
-    # Print the Keyword in the 10 topics
-    # pprint(lda_model.print_topics())
-    doc_lda = lda_model[corpus]
+    # doc_lda = lda_model[corpus]
     dict_of_topics = topics_to_dict(lda_model, num_topics)
     pprint(dict_of_topics)
     print(len(dict_of_topics.keys()))
@@ -118,7 +115,7 @@ def main():
     num_of_articles = 100
     papers = loading_and_cleaning_data(path, num_of_articles)
     remove_punctuation_and_convert_to_lowercase(papers)
-    exploratory_analysis(papers)
+    # exploratory_analysis(papers)
     prepare_data_to_lda(papers)
 
 
