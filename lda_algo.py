@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-from wordcloud import WordCloud
 import gensim
 from gensim.utils import simple_preprocess
 import gensim.corpora as corpora
@@ -30,23 +29,6 @@ def join_titles_to_list(papers):
     return long_string
 
 
-# def exploratory_analysis(papers):
-    # print('got here1')
-    # long_string = join_titles_to_list(papers)
-    # wordcloud = WordCloud(background_color="white", max_words=4, contour_width=3, contour_color='steelblue')
-
-    # Generate a word cloud
-    # wordcloud.generate(long_string)
-    # print('Got here2')
-    # Visualize the word cloud
-    # topics = wordcloud.words_()
-    # print(wordcloud)
-    # wordcloud.to_image()
-    # plt.imshow(wordcloud, interpolation='bilinear')
-    # plt.axis("off")
-    # plt.show()
-
-
 def sent_to_words(sentences):
     for sentence in sentences:
         # deacc=True removes punctuations
@@ -69,9 +51,7 @@ def remove_stopwords(texts):
 def prepare_data_to_lda(papers):
     data = papers.paper_text_processed.values.tolist()
     data_words = list(sent_to_words(data))
-    # remove stop words
     data_words = remove_stopwords(data_words)
-    # print(data_words[:1][0][:30])
 
     # Create Dictionary
     id2word = corpora.Dictionary(data_words)
@@ -79,7 +59,7 @@ def prepare_data_to_lda(papers):
     texts = data_words
     # Term Document Frequency
     corpus = [id2word.doc2bow(text) for text in texts]
-    # print(corpus[:1][0][:30])
+
     lda_model_training(corpus, id2word)
 
 
@@ -88,7 +68,6 @@ def lda_model_training(corpus, id2word):
     num_topics = 4
     # Build LDA model
     lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=id2word, num_topics=num_topics)
-    # doc_lda = lda_model[corpus]
     dict_of_topics = topics_to_dict(lda_model, num_topics)
     pprint(dict_of_topics)
     print(len(dict_of_topics.keys()))
