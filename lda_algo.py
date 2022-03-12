@@ -1,36 +1,25 @@
-# Importing modules
-import glob
-import os
 import pandas as pd
 import re
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 import gensim
 from gensim.utils import simple_preprocess
 import gensim.corpora as corpora
 import nltk
 from nltk.corpus import stopwords
 from pprint import pprint
-# from pyLDAvis import gensim_models
-import pyLDAvis.gensim_models
-import pickle
-import pyLDAvis
 
 
 TEST_PROCESS = 'paper_text_processed'
 PAPER_TEXT = 'paper_text'
 
 
-# def load_papers_and_drop_columns(path: str):
-def loading_and_cleaning_data(path: str):
-    # papers = papers.drop(columns=['id', 'event_type', 'pdf_name'], axis=1).sample(100)
+def loading_and_cleaning_data(path: str, num_of_articles: int):
     papers = pd.read_csv(path)
-    papers = papers.drop(columns=['id', 'event_type', 'pdf_name'], axis=1).sample(100)
+    papers = papers.drop(columns=['id', 'event_type', 'pdf_name'], axis=1).sample(num_of_articles)
     return papers
 
 
 def remove_punctuation_and_convert_to_lowercase(papers):
-    # papers[TEST_PROCESS] = papers[PAPER_TEXT].str.replace('[{}]'.format(string.punctuation), '')
     papers[TEST_PROCESS] = papers[PAPER_TEXT].map(lambda x: re.sub('[,\.!?]', '', x))
     papers[TEST_PROCESS] = papers[TEST_PROCESS].map(lambda x: x.lower())
 
@@ -58,16 +47,6 @@ def exploratory_analysis(papers):
     # plt.show()
 
 
-def print_head(papers):
-    print(papers.head())
-    print(papers[TEST_PROCESS].head())
-
-
-def print_text_processed_values(papers):
-    # print(list(papers['paper_text_processed'].values))
-    print(len(list(papers['paper_text_processed'].values)))
-
-
 def sent_to_words(sentences):
     for sentence in sentences:
         # deacc=True removes punctuations
@@ -92,7 +71,7 @@ def prepare_data_to_lda(papers):
     data_words = list(sent_to_words(data))
     # remove stop words
     data_words = remove_stopwords(data_words)
-    print(data_words[:1][0][:30])
+    # print(data_words[:1][0][:30])
 
     # Create Dictionary
     id2word = corpora.Dictionary(data_words)
@@ -101,7 +80,7 @@ def prepare_data_to_lda(papers):
     # Term Document Frequency
     corpus = [id2word.doc2bow(text) for text in texts]
     # View
-    print(corpus[:1][0][:30])
+    # print(corpus[:1][0][:30])
     lda_model_training(corpus, id2word)
 
 
@@ -111,34 +90,33 @@ def lda_model_training(corpus, id2word):
     # Build LDA model
     lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=id2word, num_topics=num_topics)
     # Print the Keyword in the 10 topics
-    pprint(lda_model.print_topics())
-    # print(lda_model.print_topics()[0][1])
+    # pprint(lda_model.print_topics())
     doc_lda = lda_model[corpus]
+    dict_of_topics = topics_to_dict(lda_model, num_topics)
+    pprint(dict_of_topics)
+    print(len(dict_of_topics.keys()))
+    print(top_topics(dict_of_topics, num_topics))
 
-    analyze_results(num_topics, lda_model, corpus, id2word)
+
+def topics_to_dict(lda_model, num_topics):
+    topics_dict = {}
+    for index in range(num_topics):
+        for topic in lda_model.show_topic(index):
+            if topic[0] not in topics_dict:
+                topics_dict[topic[0]] = topic[1]
+            else:
+                topics_dict[topic[0]] += topic[1]
+    return topics_dict
 
 
-def analyze_results(num_topics: int, lda_model: gensim.models.LdaMulticore, corpus: list, id2word):
-    # Visualize the topics
-    # pyLDAvis.enable_notebook()
-    # pyLDAvis.enable_notebook()
-    LDAvis_data_filepath = os.path.join('./results/ldavis_prepared_' + str(num_topics))
-    # # this is a bit time consuming - make the if statement True
-    # # if you want to execute visualization prep yourself
-    if 1 == 1:
-        LDAvis_prepared = pyLDAvis.gensim_models.prepare(lda_model, corpus, id2word)
-        with open(LDAvis_data_filepath, 'wb') as f:
-            pickle.dump(LDAvis_prepared, f)
-    # load the pre-prepared pyLDAvis data from disk
-    with open(LDAvis_data_filepath, 'rb') as f:
-        LDAvis_prepared = pickle.load(f)
-    pyLDAvis.save_html(LDAvis_prepared, './results/ldavis_prepared_' + str(num_topics) + '.html')
-    print(LDAvis_prepared)
+def top_topics(topics_dict: dict, num_topics: int) -> list:
+    return sorted(topics_dict, key=topics_dict.get, reverse=True)[:num_topics]
 
 
 def main():
     path = './NIPS_Papers/papers.csv'
-    papers = loading_and_cleaning_data(path)
+    num_of_articles = 100
+    papers = loading_and_cleaning_data(path, num_of_articles)
     remove_punctuation_and_convert_to_lowercase(papers)
     exploratory_analysis(papers)
     prepare_data_to_lda(papers)
