@@ -4,10 +4,10 @@ import pandas as pd
 from pprint import pprint
 
 # Gensim
-import gensim
-import gensim.corpora as corpora
-from gensim.utils import simple_preprocess
-from gensim.models import CoherenceModel
+import file_try_gensim
+import file_try_gensim.corpora as corpora
+from file_try_gensim.utils import simple_preprocess
+from file_try_gensim.models import CoherenceModel
 
 # spacy for lemmatization
 import spacy
