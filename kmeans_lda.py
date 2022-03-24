@@ -14,9 +14,10 @@ from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
 from matplotlib import pyplot as plt
 import seaborn as sns
+import time
 
-TEST_PROCESS = 'paper_text_processed'
-PAPER_TEXT = 'paper_text'
+pd.set_option('display.max_columns', None)
+
 TOPICS_NUM = 1
 
 
@@ -27,6 +28,7 @@ class LdaModeling:
         self._dict_of_topics = {}
         self._topics_list = []
         self._num_of_clusters = 4
+        self._current_cluster = None
 
         self.__loading_and_cleaning_data(path)
         self.__stopwords_string()
@@ -34,7 +36,6 @@ class LdaModeling:
         self.__prepare_data()
         self.kmeans_papers()
         self.activate_lda_training()
-        # self.__top_topics()
 
     def __loading_and_cleaning_data(self, path: str):
         print("__loading_and_cleaning_data")
@@ -68,25 +69,18 @@ class LdaModeling:
     def __prepare_data(self):
         print("__prepare_data")
         self.__papers['list_abstract'] = self.__papers['processed_abstract'].apply(lambda x: x.split())
-        temp = self.__papers['list_abstract'].loc[0]
-        self.remove_stopwords(temp)
         self.__papers['cleaned_abstract'] = self.__papers['list_abstract'].map(lambda x: self.remove_stopwords(x))
-        # print(self.__papers['cleaned_abstract'].loc[0])
         self.__papers = self.__papers.drop(labels=['processed_abstract', 'list_abstract'], axis=1)
         self.__papers['clean_abstract_str'] = self.__papers['cleaned_abstract'].map(lambda x: " ".join(x))
-        # print(self.__papers['cleaned_abstract'].loc[0])
-        # print(self.__papers['clean_abstract_str'].loc[0])
-        # self.activate_lda_training(data_words)
 
     def kmeans_papers(self):
         print('kmeans_papers')
-        # dataset = lda_temp.clean_papers
         vectorizer = TfidfVectorizer(sublinear_tf=True, min_df=5, max_df=0.95)
         x = vectorizer.fit_transform(self.__papers['clean_abstract_str'])
         kmeans = KMeans(n_clusters=self._num_of_clusters, random_state=42)
         kmeans.fit(x)
         clusters = kmeans.labels_
-        self.__papers['cluster'] = clusters
+        self.__papers['categories'] = clusters
 
         # initialize PCA with 2 components
         pca = PCA(n_components=2, random_state=42)
@@ -107,32 +101,30 @@ class LdaModeling:
         plt.xlabel("X0", fontdict={"fontsize": 16})
         plt.ylabel("X1", fontdict={"fontsize": 16})
         #  create scatter plot with seaborn, where hue is the class used to group the data
-        sns.scatterplot(data=self.__papers, x='x0', y='x1', hue='cluster', palette="viridis")
+        sns.scatterplot(data=self.__papers, x='x0', y='x1', hue='categories', palette="viridis")
         plt.show()
 
     def activate_lda_training(self):
         print('activate_lda_training')
-        list_clusters_numbers = self.__papers['cluster'].unique()
+        list_clusters_numbers = self.__papers['categories'].unique()
         for num in list_clusters_numbers:
-            filtered_data = self.__papers[self.__papers["cluster"] == num]
-            # data_words = self.__papers['cluster'] == num
-            # print(filtered_data['cleaned_abstract'].loc[0])
+            filtered_data = self.__papers[self.__papers["categories"] == num]
             # Create Dictionary
             id2word = corpora.Dictionary(filtered_data['cleaned_abstract'])
             # Create Corpus
             texts = filtered_data['cleaned_abstract']
             # Term Document Frequency
             corpus = [id2word.doc2bow(text) for text in texts]
+            self._current_cluster = num
             self.__lda_model_training(corpus, id2word)
+        self.__papers = self.__papers.drop(labels=['cleaned_abstract', 'clean_abstract_str', 'x0', 'x1'], axis=1)
 
     def __lda_model_training(self, corpus, id2word, num_topic=TOPICS_NUM):
-        # print("__lda_model_training")
         # Build LDA model
         self._lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=id2word, num_topics=num_topic)
         self.__topics_to_dict()
 
     def __topics_to_dict(self):
-        # print("__topics_to_dict")
         for index in range(TOPICS_NUM):
             for topic in self._lda_model.show_topic(index):
                 if topic[0] not in self._dict_of_topics:
@@ -149,6 +141,8 @@ class LdaModeling:
         for index in range(self._num_of_clusters):
             if temp_topic_list[index] not in self._topics_list:
                 self._topics_list.append(temp_topic_list[index])
+                self.__papers['categories'] = self.__papers['categories'].replace(self._current_cluster,
+                                                                                  temp_topic_list[index])
                 break
         # self._topics_list = sorted(self._dict_of_topics, key=self._dict_of_topics.get, reverse=True)[:TOPICS_NUM]
         # self._topics_list.append(sorted(self._dict_of_topics,
@@ -170,12 +164,14 @@ class LdaModeling:
 
 
 def main():
-    path_csv = './NIPS_Papers/papers.csv'
+    start = time.time()
     path_json = './json_file/response100_IOT.json'
     num_of_articles = 100
     lda_temp = LdaModeling(path_json, num_of_articles)
     topic_list = lda_temp.topics_list
     print(topic_list)
+    print(lda_temp.papers[['abstract', 'categories']])
+    print(time.time() - start)
 
 
 if __name__ == "__main__":
