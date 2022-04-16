@@ -22,7 +22,8 @@ TOPICS_NUM = 1
 
 
 class LdaModeling:
-    def __init__(self, path: str, num_articles: int):
+    def __init__(self, path: str, search_keyword: list):
+        self._search_keyword = search_keyword
         self._lda_model = None
         self.__papers = None
         self._dict_of_topics = {}
@@ -139,7 +140,7 @@ class LdaModeling:
         temp_topic_list = sorted(self._dict_of_topics, key=self._dict_of_topics.get,
                                  reverse=True)[:self._num_of_clusters]
         for index in range(self._num_of_clusters):
-            if temp_topic_list[index] not in self._topics_list:
+            if temp_topic_list[index] not in self._topics_list and temp_topic_list[index] not in self._search_keyword:
                 self._topics_list.append(temp_topic_list[index])
                 self.__papers['categories'] = self.__papers['categories'].replace(self._current_cluster,
                                                                                   temp_topic_list[index])
@@ -166,8 +167,8 @@ class LdaModeling:
 def main():
     start = time.time()
     path_json = './json_file/response100_IOT.json'
-    num_of_articles = 100
-    lda_temp = LdaModeling(path_json, num_of_articles)
+    search_keyword = ['iot']
+    lda_temp = LdaModeling(path_json, search_keyword)
     topic_list = lda_temp.topics_list
     print(topic_list)
     print(lda_temp.papers[['abstract', 'categories']])
